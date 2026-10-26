@@ -86,9 +86,9 @@
       "sha256": "6629eb76c58681ffafe4bd30920114f725f9481be81052e9a3a7b31569f79d3b"
     },
     {
-      "bytes": 28135,
+      "bytes": 28356,
       "path": "app/CatalogApp.tsx",
-      "sha256": "cdffd23680f666611238bafa4ae8c1a458376eab363786f162037b847eb3511d"
+      "sha256": "b28e5ed34c207a7f0e79e78c30301cc55384b8d25c4e53c42e07b92e472f0762"
     },
     {
       "bytes": 657,
@@ -341,9 +341,9 @@
       "sha256": "952ebad60f3c19f8f1511c1cc72a8407912029b6ba68831ada5798ce1c5f8fdb"
     },
     {
-      "bytes": 20969,
+      "bytes": 23831,
       "path": "lib/docs.ts",
-      "sha256": "2ac8891b8262cf33094eb60ca107a6058b992235462d5617836ab6e6723e3ad3"
+      "sha256": "878ae14ddb2c00f0e17c1ea36c7f8b289a091103ffd92bedfe8616fa7491fd47"
     },
     {
       "bytes": 28594,
@@ -451,13 +451,13 @@
       "sha256": "0a38e4825d55f44f858f2621f0521d96b16958b82d60286b98c5e294eb97c25d"
     },
     {
-      "bytes": 248302,
+      "bytes": 248306,
       "path": "tsconfig.tsbuildinfo",
-      "sha256": "9f92e74d88d955a48684671b8c0e672622583d8585f692073c34b3795f8e3668"
+      "sha256": "8dda12f615e427bb8890d870ab6d67755a6437ecd26be4d06a8e25167f9c840e"
     }
   ],
   "kind": "catalog",
   "schema": "openconsole.public-tree.v2",
   "sharedContractHashes": {},
-  "upstreamRevision": "15b5211819e40ed7d98e327478069f637b0fe391"
+  "upstreamRevision": "2c98d32d9a619cb041e1c30239caf151441810b8"
 }
