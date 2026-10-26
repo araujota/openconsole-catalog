@@ -1,0 +1,13 @@
+name: Catalog bug
+description: Report a catalog, documentation, or upload-flow defect
+body:
+  - type: markdown
+    attributes: { value: "Security vulnerabilities belong in a private advisory." }
+  - type: input
+    id: url
+    attributes: { label: Deployment URL and commit }
+    validations: { required: true }
+  - type: textarea
+    id: reproduce
+    attributes: { label: Reproduction }
+    validations: { required: true }

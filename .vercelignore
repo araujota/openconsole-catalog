@@ -1,0 +1,10 @@
+.env*
+.next/
+.quickstart-logs
+.vercel/
+node_modules/
+test-results/
+.agents/
+.claude/
+skills-lock.json
+playwright-report/
