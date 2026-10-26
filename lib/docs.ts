@@ -1,13 +1,14 @@
 export const DOC_VERSION = "v0.1";
 export const SITE_URL = "https://openconsole-araujota97gmailcoms-projects.vercel.app";
 export const RUNTIME_REPO = "https://github.com/araujota/openconsole";
+export const ARM64_RUNTIME_REPO = "https://github.com/araujota/openconsole-arm64";
 export const CATALOG_REPO = "https://github.com/araujota/openconsole-catalog";
 export const RUNTIME_TAG = "v0.1.0-ovmf-preview.1";
 
 export type DocSection = { id: string; title: string; body: string[]; bullets?: string[]; code?: string };
 export type DocPage = { slug: string; group: string; title: string; summary: string; sections: DocSection[] };
 
-const noOs = "An OCG game is an x64 EFI application running before ExitBootServices. There is no operating system: do not assume POSIX files, processes, threads, hosted libc, desktop sockets, mmap/ioctl, kernel DRM, browser APIs, or dynamic libraries.";
+const noOs = "An OCG game is a native x64 or ARM64 EFI application running before ExitBootServices. There is no operating system: do not assume POSIX files, processes, threads, hosted libc, desktop sockets, mmap/ioctl, kernel DRM, browser APIs, or dynamic libraries.";
 
 export const docs: DocPage[] = [
   { slug: "overview", group: "Start", title: "What OpenConsole is", summary: "The portable boot target, its trust model, and what v0.1 actually supports.", sections: [
@@ -33,8 +34,13 @@ export const docs: DocPage[] = [
   ]},
   { slug: "ocg2", group: "Formats", title: "OCG2 signed bundles", summary: "Deterministic container layout, roles, paths, signatures, identity, and retained installation.", sections: [
     { id: "envelope", title: "Envelope and index", body: ["OCG2 is a deterministic binary envelope with bounded integer fields, a canonical path-sorted index, payload ranges, role assignments, bundle identity, publisher key ID, and an Ed448 signature. Decoders reject truncation, overlap, overflow, duplicate or case-fold-colliding paths, non-normal paths, and trailing ambiguity." ] },
-    { id: "roles", title: "Roles", body: ["Exactly one manifest and one x64 EFI application entry are required. A bounded OCJ1 jacket is expected for catalog presentation. controls.cfg and data files have explicit roles. Executable bytes cannot masquerade as untyped assets; PE/COFF structure and subsystem are validated independently." ] },
+    { id: "roles", title: "Roles", body: ["Exactly one manifest and one native EFI application entry are required. x64 uses entry-x64 with PE machine 0x8664; ARM64 uses entry-arm64 with PE machine 0xAA64. OCG2 v2 never carries both. A bounded OCJ1 jacket is expected for catalog presentation. controls.cfg and data files have explicit roles. PE/COFF structure and subsystem are validated independently." ] },
     { id: "install", title: "Transactional installation", body: ["The parent retains the original OCG2, a signed descriptor, and an extracted package tree in one of two slots. It writes staging data, flushes, reopens, rehashes, and only then commits the alternate checksummed selector generation. The prior slot remains last-known-good until commit." ] }
+  ]},
+  { slug: "arm64", group: "Runtime", title: "ARM64 / AArch64 suitcase", summary: "Build, package, and test native ARM64 games with the separately released BOOTAA64.EFI runtime.", sections: [
+    { id: "choose", title: "Separate native target", body: ["ARM64 is a separate repository and release, not an x64 image with a different filename. Firmware boots EFI/BOOT/BOOTAA64.EFI. Games declare architecture = \"arm64\", carry one entry-arm64 role, and must be PE32+ machine 0xAA64 subsystem 10."], code: "git clone https://github.com/araujota/openconsole-arm64.git\ncd openconsole-arm64\nmake test-arm64-host arm64-image" },
+    { id: "vm", title: "AAVMF acceptance", body: ["make test-arm64-aavmf boots QEMU virt with AAVMF, captures the dashboard and child framebuffers, injects keyboard input, verifies ordered parent/child/return serial checkpoints, inventories every EFI architecture, and records exact hashes and tool versions."], code: "sudo apt install clang lld qemu-system-arm qemu-efi-aarch64 dosfstools mtools\nmake test-arm64-aavmf" },
+    { id: "evidence", title: "Current boundary", body: ["The ARM64 release is an AAVMF-validated development preview. Native boot, GOP dashboard, discovery, keyboard input, child launch, and return are VM-validated. Physical ARM64 hardware, networking, audio, Secure Boot, and GPU acceleration remain unverified and do not inherit x64 evidence."] }
   ]},
   { slug: "assets-controls", group: "Formats", title: "Jackets, data, and controls", summary: "Firmware-friendly pixels and bounded declarative assets.", sections: [
     { id: "ocj1", title: "OCJ1 jacket pixels", body: ["Firmware does not need a PNG or JPEG decoder. OCJ1 stores a small header plus square, row-major pixels in a declared GOP-compatible layout. Dimensions, multiplication, byte count, and file bounds are validated before allocation. Use tools/jacket-gen.c or tools/game_assets.py." ] },
@@ -78,7 +84,7 @@ export const docs: DocPage[] = [
     { id: "never-infer", title: "Do not infer", body: ["Do not translate desktop OpenGL, sockets, file APIs, threads, or package managers directly. Do not claim full GLES, GPU acceleration, sandboxing, Secure Boot, or hardware support from OVMF evidence. Do not add a new ABI when the versioned public header already provides the operation." ] }
   ]},
   { slug: "contribute", group: "Project", title: "Contribute", summary: "Choose the runtime or catalog repository and preserve the project’s evidence discipline.", sections: [
-    { id: "runtime", title: "Runtime and SDK", body: ["Use github.com/araujota/openconsole for firmware, formats, public headers, examples, analyzers, packaging tools, OVMF tests, and release images. Read CONTRIBUTING.md, SECURITY.md, and docs/status.md before changing a contract." ] },
+    { id: "runtime", title: "Runtime and SDK", body: ["Use github.com/araujota/openconsole for x64 and github.com/araujota/openconsole-arm64 for ARM64. Both expose the shared formats, public headers, examples, analyzers, and packaging tools; their native images, CI evidence, and releases remain separate. Read CONTRIBUTING.md, SECURITY.md, and docs/status.md before changing a contract." ] },
     { id: "catalog", title: "Catalog and documentation", body: ["Use github.com/araujota/openconsole-catalog for the Next.js client, Convex service, versioned docs, accessibility tests, and Vercel configuration. Never commit provider credentials or generated local environment files." ] },
     { id: "evidence", title: "Make narrow claims", body: ["Label host, OVMF, physical, and release evidence separately. New MMIO, DMA, reset, or physical GPU behavior requires its own safety gate. Report security issues privately using the repository policy." ] }
   ]},

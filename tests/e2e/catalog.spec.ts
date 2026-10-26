@@ -37,6 +37,20 @@ test("browse, search, inspect provenance, and reach publisher intake", async ({ 
   await expect(page.getByText("Drop a signed .ocg bundle")).toBeVisible();
 });
 
+test("runtime downloads distinguish x64 and ARM64 without autodetection", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Download the suitcase EFI" })).toBeVisible();
+  await expect(page.getByText("x64 / AMD64", { exact: true })).toBeVisible();
+  await expect(page.getByText("ARM64 / AArch64", { exact: true })).toBeVisible();
+  await expect(page.getByText("EFI/BOOT/BOOTX64.EFI", { exact: true })).toBeVisible();
+  await expect(page.getByText("EFI/BOOT/BOOTAA64.EFI", { exact: true })).toBeVisible();
+  const metadata = await page.request.get("/downloads.json");
+  expect(metadata.ok()).toBeTruthy();
+  const catalog = await metadata.json();
+  expect(catalog.runtimes.arm64.repository).toContain("openconsole-arm64");
+  expect(catalog.legacyX64.developmentImage).toBe(catalog.runtimes.x64.artifact);
+});
+
 test("versioned documentation is navigable, searchable, and agent-readable", async ({ page, request }) => {
   await page.goto("/docs");
   await expect(page.getByRole("heading", { name: "Build games beneath the operating system." })).toBeVisible();

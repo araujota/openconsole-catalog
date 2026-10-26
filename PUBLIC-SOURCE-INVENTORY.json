@@ -86,9 +86,9 @@
       "sha256": "6629eb76c58681ffafe4bd30920114f725f9481be81052e9a3a7b31569f79d3b"
     },
     {
-      "bytes": 25731,
+      "bytes": 28135,
       "path": "app/CatalogApp.tsx",
-      "sha256": "dfcf46fd93758537d8902908ba546daaa50f0b7cf49421b902bffda8897dcbfa"
+      "sha256": "cdffd23680f666611238bafa4ae8c1a458376eab363786f162037b847eb3511d"
     },
     {
       "bytes": 657,
@@ -116,6 +116,11 @@
       "sha256": "12a1ddda238a2e267f39c05e29bd3a0edadda5c66bab855bfc5e5c613237e7de"
     },
     {
+      "bytes": 156,
+      "path": "app/downloads.json/route.ts",
+      "sha256": "b096c6bc7aa887b8eb0d3f8673b3f12c7c27213ed727c384b0e301879a491d0f"
+    },
+    {
       "bytes": 1059,
       "path": "app/error.tsx",
       "sha256": "95042aa4ef85c0fa8b62707094a057c66184e153601a7ed6df68ce15c98d9deb"
@@ -136,9 +141,9 @@
       "sha256": "05b4f4d324c8307f6822660f42419ab5bb63d3c271414e5b38a2dc316bd62830"
     },
     {
-      "bytes": 861,
+      "bytes": 1140,
       "path": "app/llms.txt/route.ts",
-      "sha256": "6551aae4e81f9afeee1a3774cada427ebd891241749860f5a9a74afb91794d78"
+      "sha256": "306a8b8974b1fa5ef62719e4f789778704e4ab18daeeacd10dd83d93968a9a70"
     },
     {
       "bytes": 104,
@@ -336,14 +341,19 @@
       "sha256": "952ebad60f3c19f8f1511c1cc72a8407912029b6ba68831ada5798ce1c5f8fdb"
     },
     {
-      "bytes": 19296,
+      "bytes": 20969,
       "path": "lib/docs.ts",
-      "sha256": "34cf12d4282d0a208a3b88ea460234d192a89a4515edc0f335b469aeb763ecc3"
+      "sha256": "2ac8891b8262cf33094eb60ca107a6058b992235462d5617836ab6e6723e3ad3"
     },
     {
-      "bytes": 27633,
+      "bytes": 28594,
       "path": "lib/openconsoleAnalyzer.ts",
-      "sha256": "356cfff59ed57e32707207bccfc744267d5199f6cc337b30277c78e19247e4c9"
+      "sha256": "e1f60b358a466b1e52de52d809b08ce2dbaf23e31b0873e61a2799c25fa4ab91"
+    },
+    {
+      "bytes": 2510,
+      "path": "lib/runtimes.ts",
+      "sha256": "44a7d653125f46a39fcc9234a55e598d2561844121dc089590a4eadc2cab5beb"
     },
     {
       "bytes": 169,
@@ -396,9 +406,9 @@
       "sha256": "2feb72bbd41b938e90b4b730f7780a545603e84ce71e87c367276f0a2a0b1647"
     },
     {
-      "bytes": 1965,
+      "bytes": 2048,
       "path": "scripts/validate-docs.ts",
-      "sha256": "d1d8b30c475a0b6cdae5406200c147492e2ac188e338d14a61e31c55d6474892"
+      "sha256": "dbe36b77e5ccbdd2a17df9c8cec23ee690adacdc5a56d3ebf2f0b7df1a014ec2"
     },
     {
       "bytes": 8841,
@@ -411,9 +421,9 @@
       "sha256": "de219e092ae3143b938ec423007f9a4d18e46715f4179dae68410f02fa364905"
     },
     {
-      "bytes": 4856,
+      "bytes": 5711,
       "path": "tests/e2e/catalog.spec.ts",
-      "sha256": "56ab4e8e1156b9ab94d0c534acc4317269d6fbe89131a383696f4607d2bfbc39"
+      "sha256": "654a63a28fe4ff48a67043a91f906df9626bf47c31b0f1578c6ffd10a0cbc81a"
     },
     {
       "bytes": 2610,
@@ -431,16 +441,23 @@
       "sha256": "dad1abab660c47ba3416b3a37cc857b9b8ccf221e71712b0bdafa1db4e0bb42a"
     },
     {
+      "bytes": 995,
+      "path": "tests/unit/runtimes.test.ts",
+      "sha256": "426bfd2220f5955eb612a833d300aa0af1a6abbcb3471494bc9153bdb3d19ad5"
+    },
+    {
       "bytes": 738,
       "path": "tsconfig.json",
       "sha256": "0a38e4825d55f44f858f2621f0521d96b16958b82d60286b98c5e294eb97c25d"
     },
     {
-      "bytes": 247478,
+      "bytes": 248302,
       "path": "tsconfig.tsbuildinfo",
-      "sha256": "9ee0d61a4a76d1b723bcf5aeae995bfa5ade620b00357064bd11a7801889b82f"
+      "sha256": "9f92e74d88d955a48684671b8c0e672622583d8585f692073c34b3795f8e3668"
     }
   ],
   "kind": "catalog",
-  "schema": "openconsole.public-tree.v1"
+  "schema": "openconsole.public-tree.v2",
+  "sharedContractHashes": {},
+  "upstreamRevision": "15b5211819e40ed7d98e327478069f637b0fe391"
 }

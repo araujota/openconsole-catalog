@@ -85,7 +85,7 @@ function parseManifest(bytes: Uint8Array): Record<string, string | string[] | nu
   const required = ["format_version", "package_format", "id", "title", "version", "entry", "architecture",
     "required_capabilities", "optional_capabilities", "graphics_api", "accel", "min_graphics_abi"];
   if (required.some((key) => fields[key] === undefined) || fields.format_version !== "2.0" || fields.package_format !== "ocg2" ||
-      fields.architecture !== "x64" || !["gop", "gles2"].includes(String(fields.graphics_api)) ||
+      !["x64", "arm64"].includes(String(fields.architecture)) || !["gop", "gles2"].includes(String(fields.graphics_api)) ||
       !["forbidden", "optional", "required"].includes(String(fields.accel)) ||
       !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(String(fields.id)) ||
       !/^[0-9A-Za-z][0-9A-Za-z.+_-]{0,31}$/.test(String(fields.version))) throw new ParseError("OCG2_MANIFEST_MISMATCH");
@@ -127,25 +127,27 @@ async function parseBundle(bytes: Uint8Array) {
     const path = ascii(slice(index, cursor, pathLength, "OCG2_BAD_PATH"), "OCG2_BAD_PATH"); cursor += pathLength;
     if (!/^[A-Za-z0-9._/-]{1,240}$/.test(path) || path.split("/").some((part) => !part || part === "." || part === "..") ||
         /^(efi|games|\.openconsole)\//i.test(path) || /^openconsole-/i.test(path)) throw new ParseError("OCG2_BAD_PATH");
-    if (entryFlags !== 0 || role < 1 || role > 5 || (i > 0 && path <= previousPath) || folded.has(path.toLowerCase())) throw new ParseError("OCG2_BAD_ROLE");
+    if (entryFlags !== 0 || role < 1 || role > 6 || (i > 0 && path <= previousPath) || folded.has(path.toLowerCase())) throw new ParseError("OCG2_BAD_ROLE");
     if (offset !== previousEnd || length > MAX_FILE || offset > payload.length - length) throw new ParseError("OCG2_BAD_OFFSET");
     const data = payload.slice(offset, offset + length); if (await digest(data) !== hex(expectedDigest)) throw new ParseError("OCG2_BAD_DIGEST");
     entries.push({ path, role, data }); previousPath = path; previousEnd = offset + length; folded.add(path.toLowerCase());
   }
-  if (cursor !== index.length || previousEnd !== payload.length || manifestIndex >= entries.length || entries[manifestIndex].role !== 1 || entries[manifestIndex].path !== "game.toml" || entries.filter((e) => e.role === 2).length !== 1) throw new ParseError("OCG2_BAD_ROLE");
+  if (cursor !== index.length || previousEnd !== payload.length || manifestIndex >= entries.length || entries[manifestIndex].role !== 1 || entries[manifestIndex].path !== "game.toml" || entries.filter((e) => e.role === 2 || e.role === 6).length !== 1) throw new ParseError("OCG2_BAD_ROLE");
   const manifest = parseManifest(entries[manifestIndex].data);
   if (manifest.id !== gameId || manifest.version !== version) throw new ParseError("OCG2_MANIFEST_MISMATCH");
-  for (const [field, role] of [["entry", 2], ["jacket", 3], ["controls", 4]] as const) {
+  const executableRole = manifest.architecture === "arm64" ? 6 : 2;
+  for (const [field, role] of [["entry", executableRole], ["jacket", 3], ["controls", 4]] as const) {
     const entry = entries.find((item) => item.role === role); if ((manifest[field] !== undefined) !== (entry !== undefined) || entry && manifest[field] !== entry.path) throw new ParseError("OCG2_MANIFEST_MISMATCH");
   }
   return { bundleId, keyId, signature, index, entries, manifest, gameId, version };
 }
 
-function parsePe(bytes: Uint8Array): Section[] {
+function parsePe(bytes: Uint8Array, architecture: string): Section[] {
   if (bytes.length < 64 || bytes[0] !== 0x4d || bytes[1] !== 0x5a) throw new ParseError("PE_BAD_DOS");
   const pe = u32(bytes, 0x3c); if (pe > bytes.length - 24 || ascii(bytes.slice(pe, pe + 4), "PE_BAD_SIGNATURE") !== "PE\0\0") throw new ParseError("PE_BAD_SIGNATURE");
   const count = u16(bytes, pe + 6), optionalSize = u16(bytes, pe + 20), optional = pe + 24;
-  if (u16(bytes, pe + 4) !== 0x8664) throw new ParseError("PE_BAD_MACHINE");
+  const expectedMachine = architecture === "arm64" ? 0xaa64 : 0x8664;
+  if (u16(bytes, pe + 4) !== expectedMachine) throw new ParseError("PE_BAD_MACHINE");
   if (count < 1 || count > 96 || optionalSize < 112 || optional > bytes.length - optionalSize || u16(bytes, optional) !== 0x20b || u16(bytes, optional + 68) !== 10) throw new ParseError("PE_BAD_OPTIONAL_HEADER");
   const entry = u32(bytes, optional + 16), imageSize = u32(bytes, optional + 56), headersSize = u32(bytes, optional + 60), table = optional + optionalSize;
   if (table > bytes.length - count * 40 || headersSize > bytes.length) throw new ParseError("PE_TRUNCATED_SECTIONS");
@@ -219,12 +221,14 @@ export async function analyzeOpenConsoleBundle(blob: Uint8Array, trustedPublicKe
   for (const capability of unsupportedRequired) await add("OCSA-CAPABILITY-REQUIRED-UNSUPPORTED", "high", "verified", "block", `Required capability ${capability} is outside this platform snapshot.`, "Target a supported version or publish with a matching platform profile.", "game.toml", null, null, new TextEncoder().encode(capability));
   for (const capability of unsupportedOptional) await add("OCSA-CAPABILITY-OPTIONAL-UNSUPPORTED", "info", "verified", "none", `Optional capability ${capability} is outside this platform snapshot.`, "Provide a graceful fallback when the capability is absent.", "game.toml", null, null, new TextEncoder().encode(capability));
   stages.push({ name: "compatibility", status: unsupportedRequired.length ? "failed" : "passed", unsupportedRequired, unsupportedOptional });
-  const executable = bundle.entries.find((item) => item.role === 2)!; let sections: Section[];
-  try { sections = parsePe(executable.data); stages.push({ name: "pe-coff", status: "passed" }); }
-  catch (error) { const parsed = error as ParseError; await add("OCSA-PE-INVALID", "critical", "verified", "block", `The x64 EFI application failed PE/COFF validation: ${parsed.code}.`, "Link a bounded PE32+ x64 EFI application with subsystem 10 and a valid executable entry point.", executable.path, null, null, executable.data); stages.push({ name: "pe-coff", status: "failed", code: parsed.code }); return finish(); }
+  const architecture = String(bundle.manifest.architecture);
+  const executableRole = architecture === "arm64" ? 6 : 2;
+  const executable = bundle.entries.find((item) => item.role === executableRole)!; let sections: Section[];
+  try { sections = parsePe(executable.data, architecture); stages.push({ name: "pe-coff", status: "passed", architecture }); }
+  catch (error) { const parsed = error as ParseError; await add("OCSA-PE-INVALID", "critical", "verified", "block", `The ${architecture} EFI application failed PE/COFF validation: ${parsed.code}.`, `Link a bounded PE32+ ${architecture} EFI application with subsystem 10 and a valid executable entry point.`, executable.path, null, null, executable.data); stages.push({ name: "pe-coff", status: "failed", code: parsed.code }); return finish(); }
   try { const execSections = sections.filter((section) => section.flags & 0x20000000); if (execSections.length > 32 || execSections.reduce((n, section) => n + section.rawSize, 0) > 8 * 1024 * 1024) throw new ParseError("ANALYSIS_EXECUTABLE_LIMIT");
     for (const section of execSections) { if (section.flags & 0x80000000) await add("OCSA-PE-WRITABLE-EXECUTABLE", "critical", "verified", "block", "A PE section is simultaneously writable and executable.", "Separate mutable data from executable code and relink the EFI application.", executable.path, section.raw, section.va, executable.data.slice(section.raw)); const body = executable.data.slice(section.raw, section.raw + section.rawSize);
-      for (let local = 0; local < body.length; local++) {
+      for (let local = 0; architecture === "x64" && local < body.length; local++) {
         const byte = body[local], offset = section.raw + local, va = section.va + local;
         if ((byte >= 0xe4 && byte <= 0xef) || (byte >= 0x6c && byte <= 0x6f)) {
           await add("OCSA-X64-DIRECT-IO", "critical", "low", "block", "Conservative executable-byte policy found a direct port-I/O opcode candidate.", "Use a declared OpenConsole protocol or UEFI protocol instead of direct port I/O; host analysis will confirm instruction boundaries.", executable.path, offset, va, body.slice(local, local + 15));
@@ -238,7 +242,10 @@ export async function analyzeOpenConsoleBundle(blob: Uint8Array, trustedPublicKe
     const rules: [string, string, AnalyzerFinding["severity"], Effect, string, string][] = [["SetVariable", "OCSA-UEFI-VARIABLE-WRITE", "critical", "block", "Firmware-variable mutation indicator found.", "Games must not mutate firmware variables."], ["ResetSystem", "OCSA-UEFI-RESET", "critical", "block", "System-reset service indicator found.", "Return to the parent instead of resetting the host."], ["WriteFile", "OCSA-FILESYSTEM-WRITE", "high", "block", "Filesystem-write indicator found.", "Keep games read-only; use a future parent-mediated save protocol."], ["EFI_DRIVER_BINDING_PROTOCOL", "OCSA-DRIVER-BINDING", "critical", "block", "Driver-binding protocol indicator found in an application.", "Package drivers separately under platform policy."], ["ExitBootServices", "OCSA-LIFECYCLE-EXIT-BOOT-SERVICES", "critical", "block", "ExitBootServices lifecycle indicator found.", "A game must return under the parent's existing boot-services lifecycle."], ["SetWatchdogTimer", "OCSA-LIFECYCLE-WATCHDOG", "high", "block", "Direct watchdog manipulation indicator found.", "Leave watchdog and recovery policy under parent control."], ["InstallProtocolInterface", "OCSA-LIFECYCLE-PROTOCOL-INSTALL", "medium", "review", "Protocol installation can outlive the game generation.", "Use parent-provided generation-scoped protocols and uninstall owned resources before return."], ["LoadImage", "OCSA-LIFECYCLE-IMAGE-LOAD", "high", "review", "Nested EFI image loading indicator found.", "Declare and justify child loading; normally return launch control to the parent."]];
     for (const [marker, rule, severity, effect, explanation, remediation] of rules) for (const encoded of [new TextEncoder().encode(marker), new Uint8Array([...marker].flatMap((character) => [character.charCodeAt(0), 0]))]) for (let at = find(executable.data, encoded); at >= 0; at = find(executable.data, encoded, at + 1)) await add(rule, severity, "medium", effect, explanation, remediation, executable.path, at, 0, executable.data.slice(at));
     if (!required.some((item) => item.startsWith("openconsole.net@"))) for (const marker of ["EFI_HTTP_PROTOCOL", "EFI_TCP4_PROTOCOL", "EFI_UDP4_PROTOCOL", "http://", "https://"]) { const needle = new TextEncoder().encode(marker.toLowerCase()); for (let at = findAsciiCaseInsensitive(executable.data, needle); at >= 0; at = findAsciiCaseInsensitive(executable.data, needle, at + 1)) await add("OCSA-NETWORK-UNDECLARED", "high", "medium", "block", "Network-use indicator is present without a required network capability.", "Declare the versioned openconsole.net capability or remove network use.", executable.path, at, 0, executable.data.slice(at)); }
-    stages.push({ name: "machine-code-indicators", status: "passed" });
+    if (architecture === "arm64") {
+      await add("OCSA-ARM64-DISASSEMBLY-REQUIRED", "high", "verified", "inconclusive", "Browser analysis validated ARM64 PE structure but did not disassemble AArch64 instructions.", "Run the pinned host analyzer for Capstone ARM64 system-instruction coverage before publication.", executable.path);
+      stages.push({ name: "machine-code-indicators", status: "limit", architecture, coverage: "structural-only-no-x86-scan" });
+    } else stages.push({ name: "machine-code-indicators", status: "passed", architecture, coverage: "conservative-x86-byte-policy" });
   } catch (error) { await add("OCSA-ANALYSIS-BUDGET", "high", "verified", "inconclusive", (error as Error).message, "Reduce executable size/complexity or request manual review.", executable.path); stages.push({ name: "machine-code-indicators", status: "limit" }); }
   return finish();
 }
